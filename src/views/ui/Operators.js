@@ -11,10 +11,13 @@ function Operators(props) {
   //const [rowPerPage, setRowPerPage] = useState(50)
   const [users, setUsers] = useState([])
   const [filterStates, setFilterStates] = useState([])
+  const [filterCities, setFilterCities] = useState([])
+  const [filters, setFilters] = useState([])
   const [requestFilter, setRequestFilter] = useState('')
+  const [requestFilterCities, setRequestFilterCities] = useState('')
   const [loading, setLoading] = useState(true)
-  const [selectedCountry, setSelectedCountry] = useState('US');
-  const [selectedCategory, setSelectedCategory] = useState('Marijuana');
+  const [selectedCountry, setSelectedCountry] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
   const [visibleStatesRows, setVisibleStatesRows] = useState(5);
   const [pageNumber, setPageNumber] = useState(1);
 
@@ -40,7 +43,7 @@ function Operators(props) {
       let url = `http://localhost:5000/api/v1/operators?limit=${rowPerPage}&page=${pageNumber}`
       if (requestFilter || selectedCountry || selectedCategory) {
         console.log('requestFilter', requestFilter.length)
-        url += `&${requestFilter.length >= 1 ? `state=${requestFilter}` : ''}${selectedCountry ? `&country=${selectedCountry}` : 'US'}${selectedCategory ? `&category=${selectedCategory}` : 'Marijuana'}`;
+        url += `&${requestFilter.length >= 1 ? `state=${requestFilter}` : ''}${selectedCountry ? `&country=${selectedCountry}` : ''}${selectedCategory.length >= 1 ? `&category=${selectedCategory}` : ''}`;
       }
       if (searchQuery) {
         console.log(searchQuery)
@@ -64,10 +67,11 @@ function Operators(props) {
 
   const loadInitialFilters = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/v1/operators?limit=50&page=1`);
+      const response = await fetch(`http://localhost:5000/api/v1/filters`);
       const json = await response.json();
+      setFilters(json?.filters)
       setFilterStates(json?.filters?.states)
-
+      setFilterCities(json?.filters?.cities)
       setLoading(false)
     } catch (e) {
       console.log(e);
@@ -81,6 +85,18 @@ function Operators(props) {
       setUsers([])
     } else {
       setRequestFilter([...requestFilter, e.target.value]);
+      setUsers([])
+    }
+    setPageNumber(1)
+  }
+
+  const onChangeCities = (e) => {
+    setLoading(true)
+    if (requestFilterCities.includes(e.target.value)) {
+      setRequestFilterCities(requestFilterCities.filter(item => item !== e.target.value));
+      setUsers([])
+    } else {
+      setRequestFilterCities([...requestFilterCities, e.target.value]);
       setUsers([])
     }
     setPageNumber(1)
@@ -127,8 +143,8 @@ function Operators(props) {
     setUsers([])
     setRequestFilter([])
     loadMore()
-    setSelectedCountry('US')
-    setSelectedCategory('Marijuana')
+    setSelectedCountry("")
+    setSelectedCategory("")
   }
 
 
@@ -175,54 +191,84 @@ function Operators(props) {
                   <button className='btn btn-link' onClick={() => filterReset()}>Reset</button>
                 </div>
               </div>
-              <Accordion flush open={open} toggle={toggle}>
+              <Accordion open={open} toggle={toggle}>
                 <AccordionItem>
                   <AccordionHeader targetId="1">Category</AccordionHeader>
                   <AccordionBody accordionId="1">
-                    <FormGroup className='pb-2' check>
-                      <Input type='radio' id='category'
-                        checked={selectedCategory === 'Hemp'}
-                        value={'Hemp'}
-                        onChange={handleCategoryChange} />
-                      <Label htmlFor='category' check>
-                        Hemp
-                      </Label>
-                    </FormGroup>
-                    <FormGroup className='pb-2' check>
-                      <Input type='radio' id='category_1'
-                        checked={selectedCategory === 'Marijuana'}
-                        value={'Marijuana'}
-                        onChange={handleCategoryChange} />
-                      <Label htmlFor='category_1' check>
-                        Marijuana
-                      </Label>
-                    </FormGroup>
+                    {filters.categories?.length > 0 &&
+                      filters.categories.sort((a, b) => a.localeCompare(b)).map((val, i) => (
+                        <FormGroup className='pb-2' check key={i}>
+                          <Input
+                            id={`category_${i}`}
+                            type="radio"
+                            name='category'
+                            checked={selectedCategory === val}
+                            value={val}
+                            onChange={handleCategoryChange} />
+                          <Label htmlFor={`category_${i}`} check>{val}</Label>
+                        </FormGroup>
+                      ))}
                   </AccordionBody>
                 </AccordionItem>
                 <AccordionItem>
                   <AccordionHeader targetId="2">Country</AccordionHeader>
                   <AccordionBody accordionId="2">
-                    <FormGroup className='pb-2' check>
-                      <Input type='radio' id='country'
-                        checked={selectedCountry === 'CA'}
-                        value={'CA'}
-                        onChange={handleCountryChange} />
-                      <Label htmlFor='country' check>CA</Label>
-                    </FormGroup>
-                    <FormGroup className='pb-2' check>
-                      <Input type='radio' id='country_1'
-                        checked={selectedCountry === 'US'}
-                        value={'US'}
-                        onChange={handleCountryChange} />
-                      <Label htmlFor='country_1' check>US</Label>
-                    </FormGroup>
+                    {filters.countries?.length > 0 &&
+                      filters.countries.sort((a, b) => a.localeCompare(b)).map((val, i) => (
+                        <FormGroup className='pb-2' check key={i}>
+                          <Input
+                            id={`country_${i}`}
+                            type="radio"
+                            name='country'
+                            checked={selectedCountry === val}
+                            value={val}
+                            onChange={handleCountryChange} />
+                          <Label htmlFor={`country_${i}`} check>{val}</Label>
+                        </FormGroup>
+                      ))}
                   </AccordionBody>
                 </AccordionItem>
-                
+                <AccordionItem>
+                  <AccordionHeader targetId="3">States</AccordionHeader>
+                  <AccordionBody accordionId="3">
+                    {filterStates?.length > 0 &&
+                      filterStates.sort((a, b) => a.localeCompare(b)).map((val, i) => (
+                        <FormGroup className='pb-2' check key={i}>
+                          <Input
+                            id={`states_${i}`}
+                            type="checkbox"
+                            checked={requestFilter.includes(val)}
+                            value={val}
+                            onChange={onChange} />
+                          <Label htmlFor={`states_${i}`} check>{val}</Label>
+                        </FormGroup>
+                      ))}
+                  </AccordionBody>
+                </AccordionItem>
+                {/* <AccordionItem>
+                  <AccordionHeader targetId="4">Cities</AccordionHeader>
+                  <AccordionBody accordionId="4">
+                    {filterCities?.length > 0 &&
+                      filterCities.sort((a, b) => a.localeCompare(b)).map((val, i) => (
+                        <FormGroup className='pb-2' check key={i}>
+                          <Input
+                            id={`cities_${i}`}
+                            type="checkbox"
+                            checked={requestFilterCities.includes(val)}
+                            value={val}
+                            onChange={onChange} />
+                          <Label htmlFor={`cities_${i}`} check>{val}</Label>
+                        </FormGroup>
+                      ))}
+                  </AccordionBody>
+                </AccordionItem> */}
+
               </Accordion>
             </div>
 
-            
+
+
+
           </div>
           <div className='col-lg-8 col-xxl-9 col-12'>
             {!loading && getTotalRecords >= 1 ?
